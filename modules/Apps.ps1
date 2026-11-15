@@ -1,5 +1,5 @@
 ﻿# ============================================================
-#  Apps.ps1 — установка программ через winget
+#  Apps.ps1 — установка программ через winget и с диска
 # ============================================================
 
 function Test-WingetInstalled {
@@ -22,9 +22,82 @@ function Test-ProgramInstalled {
     return [bool]$hit
 }
 
-# Локальные установщики (apps.local): exe/msi из папки проекта
+# ---------- Папка установки ----------
+
+# Имя подпапки из названия программы: «Firefox (русский)» → «Firefox»
+function Get-SafeFolderName {
+    param([string]$Name, [string]$Fallback = 'App')
+    $n = $Name -replace '\s*\([^)]*\)', ''          # убрать скобки с пояснениями
+    $n = $n -replace '[\\/:*?"<>|]', ''             # недопустимые символы
+    $n = ($n -replace '\s+', ' ').Trim().TrimEnd('.')
+    if (-not $n) { $n = ($Fallback -split '\.')[-1] }
+    return $n
+}
+
+# Готовит корневую папку установки. Возвращает путь или '' (ставить по умолчанию).
+function Initialize-InstallRoot {
+    param([string]$Root)
+    if (-not $Root) { return '' }
+    $Root = [Environment]::ExpandEnvironmentVariables($Root)
+    $drive = [IO.Path]::GetPathRoot($Root)
+    if (-not (Test-Path $drive)) {
+        Write-Log "Диск $drive для папки установки не найден — программы будут ставиться по умолчанию" 'WARN'
+        return ''
+    }
+    if (-not (Test-Path $Root)) {
+        if (Test-DryRun) { Write-Log "mkdir $Root" 'DRY' }
+        else { New-Item -ItemType Directory -Path $Root -Force | Out-Null }
+    }
+    Write-Log "Папка установки: $Root (каждая программа — в своей подпапке; установщики без выбора папки ставятся по умолчанию)"
+    Set-WingetInstallRoot -Root $Root
+    return $Root
+}
+
+# Настройки winget: куда класть portable-пакеты и пакеты с обязательной папкой
+function Set-WingetInstallRoot {
+    param([string]$Root)
+    $path     = Join-Path $env:LOCALAPPDATA 'Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\settings.json'
+    $portable = Join-Path $Root '_portable'
+    if (Test-DryRun) { Write-Log "winget settings: installBehavior → $Root, portable → $portable" 'DRY'; return }
+    try {
+        $obj = $null
+        if (Test-Path $path) {
+            $raw   = Get-Content -Path $path -Raw -Encoding UTF8
+            $clean = ($raw -split "`r?`n" | Where-Object { -not $_.TrimStart().StartsWith('//') }) -join "`n"
+            if ($clean.Trim()) { $obj = $clean | ConvertFrom-Json }
+        }
+        if (-not $obj) { $obj = [pscustomobject]@{ '$schema' = 'https://aka.ms/winget-settings.schema.json' } }
+        $ib = Get-Cfg $obj 'installBehavior'
+        if (-not $ib) { $ib = [pscustomobject]@{}; $obj | Add-Member -NotePropertyName 'installBehavior' -NotePropertyValue $ib -Force }
+        $ib | Add-Member -NotePropertyName 'defaultInstallRoot'         -NotePropertyValue $Root     -Force
+        $ib | Add-Member -NotePropertyName 'portablePackageUserRoot'    -NotePropertyValue $portable -Force
+        $ib | Add-Member -NotePropertyName 'portablePackageMachineRoot' -NotePropertyValue $portable -Force
+        $dir = Split-Path -Parent $path
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        [IO.File]::WriteAllText($path, ($obj | ConvertTo-Json -Depth 10), (New-Object Text.UTF8Encoding $false))
+        Write-Log "winget: portable-пакеты будут ставиться в $portable" 'OK'
+    } catch { Write-Log "Не удалось обновить настройки winget: $($_.Exception.Message)" 'WARN' }
+}
+
+# Папка для конкретной программы: location (абсолютный) > folder (внутри root) > имя программы
+function Get-AppInstallLocation {
+    param($Item, [string]$Name, [string]$Id, [string]$Root)
+    if (-not $Root) { return '' }
+    if ($Item -is [string]) { return (Join-Path $Root (($Id -split '\.')[-1])) }   # "Google.Chrome" → Chrome
+    else {
+        if (Get-Cfg $Item 'noLocation' $false) { return '' }
+        $abs = [string](Get-Cfg $Item 'location' '')
+        if ($abs) { return [Environment]::ExpandEnvironmentVariables($abs) }
+        $folder = [string](Get-Cfg $Item 'folder' '')
+        if ($folder) { return (Join-Path $Root $folder) }
+    }
+    return (Join-Path $Root (Get-SafeFolderName -Name $Name -Fallback $Id))
+}
+
+# ---------- Локальные установщики (apps.local): exe/msi из папки проекта ----------
+
 function Install-LocalApps {
-    param($Cfg)
+    param($Cfg, [string]$InstallRoot = '')
     $list = @(Get-Cfg $Cfg 'local' @())
     if ($list.Count -eq 0) { return }
     $root = if ($Global:WDP_Root) { $Global:WDP_Root } else { (Get-Location).Path }
@@ -34,11 +107,16 @@ function Install-LocalApps {
     foreach ($item in $list) {
         $name    = Get-Cfg $item 'name' '?'
         $rel     = Get-Cfg $item 'path' ''
-        $iargs   = @((Get-Cfg $item 'args' '') -split '\s+' | Where-Object { $_ })
         $detect  = [string](Get-Cfg $item 'detect' '')
         $note    = Get-Cfg $item 'note' ''
         if (-not (Get-Cfg $item 'enabled' $true)) { Write-Log "$name — пропуск (enabled=false)"; continue }
         if (-not $rel) { Write-Log "$name — не указан path" 'WARN'; continue }
+
+        # {root} в args → папка установки; без заданной папки такие аргументы убираются
+        $rawArgs = [string](Get-Cfg $item 'args' '')
+        $iargs = @($rawArgs -split '\s+' | Where-Object { $_ })
+        if ($InstallRoot) { $iargs = @($iargs | ForEach-Object { $_.Replace('{root}', $InstallRoot) }) }
+        else              { $iargs = @($iargs | Where-Object { $_ -notlike '*{root}*' }) }
 
         $path = if ([IO.Path]::IsPathRooted($rel)) { $rel } else { Join-Path $root $rel }
         if (-not (Test-Path $path)) { Write-Log "$name — установщик не найден: $path" 'ERROR'; continue }
@@ -63,6 +141,8 @@ function Install-LocalApps {
         if ($note) { Write-Host ("      {0}" -f $note) -ForegroundColor Gray }
     }
 }
+
+# ---------- Ручные шаги ----------
 
 function Show-ManualSteps {
     param($Cfg)
@@ -95,22 +175,26 @@ function Show-ManualSteps {
     }
 }
 
+# ---------- Модуль ----------
+
 function Invoke-AppsModule {
     param($Config)
     $cfg = Get-Cfg $Config 'apps'
     if (-not (Get-Cfg $cfg 'enabled' $true)) { Write-Log 'Модуль apps выключен в конфиге' 'WARN'; return }
 
+    $installRoot = Initialize-InstallRoot -Root ([string](Get-Cfg $cfg 'installRoot' ''))
+
     $list = @(Get-Cfg $cfg 'winget' @())
     if ($list.Count -eq 0) {
         Write-Log 'Список программ пуст — добавьте ID пакетов в config.json → apps.winget' 'WARN'
-        Install-LocalApps $cfg
+        Install-LocalApps $cfg $installRoot
         Show-ManualSteps $cfg
         return
     }
 
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
         Write-Log 'winget не найден. Установите «Установщик приложений» из Microsoft Store и повторите.' 'ERROR'
-        Install-LocalApps $cfg
+        Install-LocalApps $cfg $installRoot
         Show-ManualSteps $cfg
         return
     }
@@ -141,11 +225,20 @@ function Invoke-AppsModule {
             Write-Log "$name уже установлен" 'OK'; $skip++; continue
         }
 
+        $loc = Get-AppInstallLocation -Item $item -Name $name -Id $id -Root $installRoot
+        $locArgs = if ($loc) { @('--location', $loc) } else { @() }
+
         Write-Log "Установка: $name ($id)" 'STEP'
-        $wargs = @('install','--id',$id,'-e','--silent','--accept-source-agreements','--accept-package-agreements','--disable-interactivity') + $srcArgs + $extra
+        $wargs = @('install','--id',$id,'-e','--silent','--accept-source-agreements','--accept-package-agreements','--disable-interactivity') + $srcArgs + $locArgs + $extra
         $code = Invoke-External 'winget' $wargs
         switch ($code) {
-            0            { Write-Log "$name установлен" 'OK'; $ok++ }
+            0 {
+                if ($loc -and -not (Test-DryRun)) {
+                    if (Test-Path $loc) { Write-Log "$name установлен в $loc" 'OK' }
+                    else { Write-Log "$name установлен (установщик не поддерживает выбор папки — стоит в месте по умолчанию)" 'OK' }
+                } else { Write-Log "$name установлен" 'OK' }
+                $ok++
+            }
             -1978335189  { Write-Log "$name уже установлен (актуальная версия)" 'OK'; $skip++ }   # 0x8A15002B
             -1978335135  { Write-Log "$name уже установлен" 'OK'; $skip++ }                        # 0x8A150061
             -1978335138  {                                                                                # 0x8A15005E PINNED_CERTIFICATE_MISMATCH
@@ -155,6 +248,6 @@ function Invoke-AppsModule {
         }
     }
     Write-Log "Программы: установлено $ok, пропущено $skip, ошибок $fail" $(if ($fail) {'WARN'} else {'OK'})
-    Install-LocalApps $cfg
+    Install-LocalApps $cfg $installRoot
     Show-ManualSteps $cfg
 }

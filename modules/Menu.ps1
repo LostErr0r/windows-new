@@ -11,6 +11,7 @@ function Get-ItemLabels {
             local           = 'С диска (WatchThisFolder)'
             manual          = 'Вручную — показать подсказку и ссылку'
             openManualLinks = 'Открыть ссылки ручных шагов в браузере'
+            installRoot     = 'Ставить программы в папку (выкл. = по умолчанию на C:)'
         }
         privacy = @{
             disableTelemetry           = 'Телеметрия и диагностика (DiagTrack, задачи сбора данных)'

@@ -122,17 +122,32 @@ winget search "chrome"
 
 Уже установленные программы пропускаются.
 
+### Папка установки (не на системный диск)
+
+```json
+"installRoot": "D:\\Programs"
+```
+
+Если задано, каждая программа ставится в свою подпапку: `D:\Programs\Firefox`, `D:\Programs\Steam`, `D:\Programs\OBS Studio` (имя папки — название программы без скобок). Пусто `""` — ставить по умолчанию.
+
+- Папка передаётся winget ключом `--location`. Установщики, которые не умеют выбирать папку (Discord, CapCut, msix-пакеты вроде TranslucentTB), молча ставятся туда, куда привыкли; скрипт напишет в логе, куда программа встала на самом деле.
+- У отдельной программы можно задать: `"folder": "Games\\Steam"` (внутри `installRoot`), `"location": "E:\\Steam"` (любой путь) или `"noLocation": true` (не трогать папку).
+- Portable-пакеты winget будут складываться в `installRoot\_portable` (скрипт прописывает это в настройки winget).
+- Если диска из `installRoot` нет (например, запуск на ноутбуке с одним диском), скрипт предупредит и поставит всё по умолчанию.
+- В списке с галочками этот пункт можно выключить на один запуск.
+
 ### Установщики с диска
 
 Секция `apps.local` — exe/msi из `resources\installers`, ставятся тихо:
 
 ```json
 "local": [
-  { "name": "MiniBin", "path": "resources\\installers\\MiniBin-6.1.1.1-Setup.exe", "args": "/S", "detect": "MiniBin" }
+  { "name": "MiniBin", "path": "resources\\installers\\MiniBin-6.1.1.1-Setup.exe", "args": "/S /D={root}\\MiniBin", "detect": "MiniBin" }
 ]
 ```
 
 - `args` — ключи тихой установки: NSIS `/S`, Inno Setup `/VERYSILENT /NORESTART`; для msi скрипт сам добавляет `/qn`.
+- `{root}` в `args` заменяется на `installRoot`: NSIS `/D={root}\\App` (всегда последним и без кавычек), Inno Setup `/DIR={root}\\App`. Если `installRoot` пуст, такие аргументы убираются.
 - `detect` — часть названия в «Установка и удаление программ» или путь к файлу (`%ProgramFiles(x86)%\...`). Если найдено — пропуск.
 
 ### Программы, которых нет в winget

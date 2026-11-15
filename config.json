@@ -18,6 +18,14 @@
     // "" — все источники, включая msstore; на свежей Windows msstore часто падает с ошибкой
     // сертификата 0x8A15005E и ломает каждую установку.
     "source": "winget",
+
+    // Куда ставить программы. Пусто "" — по умолчанию (обычно C:\Program Files).
+    // Если задано, каждая программа ставится в свою подпапку: D:\Programs\Firefox, D:\Programs\Steam ...
+    // Установщики, которые не умеют выбирать папку (Discord, CapCut, msix-пакеты), ставятся по умолчанию.
+    // У программы можно указать: "folder": "Games\\Steam" (внутри installRoot),
+    // "location": "E:\\Steam" (любой путь) или "noLocation": true (не трогать папку).
+    "installRoot": "D:\\Programs",
+
     "winget": [
       // --- Браузер, связь ---
       { "id": "Mozilla.Firefox.ru",             "name": "Firefox (русский)" },   // англ. версия: Mozilla.Firefox
@@ -57,11 +65,12 @@
     ],
 
     // Локальные установщики из папки resources\installers (путь относительно папки скрипта).
-    //   args   — ключи тихой установки (NSIS: /S, Inno Setup: /VERYSILENT /NORESTART, msi — ключи к /qn)
+    //   args   — ключи тихой установки (NSIS: /S, Inno Setup: /VERYSILENT /NORESTART, msi — ключи к /qn).
+    //            {root} заменяется на installRoot: NSIS "/S /D={root}\\MiniBin", Inno "/DIR={root}\\App".
     //   detect — как понять, что уже стоит: часть имени в «Установка и удаление программ»
     //            или путь к файлу (можно с %ProgramFiles(x86)% и т.п.)
     "local": [
-      { "name": "MiniBin (корзина в трее)", "path": "resources\\installers\\MiniBin-6.1.1.1-Setup.exe", "args": "/S", "detect": "MiniBin",
+      { "name": "MiniBin (корзина в трее)", "path": "resources\\installers\\MiniBin-6.1.1.1-Setup.exe", "args": "/S /D={root}\\MiniBin", "detect": "MiniBin",
         "note": "после установки запустить MiniBin и включить автозапуск в его настройках" }
     ],
 

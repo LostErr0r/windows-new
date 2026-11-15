@@ -124,17 +124,32 @@ Add it to `apps.winget`:
 
 Already installed apps are skipped.
 
+### Install folder (off the system drive)
+
+```json
+"installRoot": "D:\\Programs"
+```
+
+When set, every app goes into its own subfolder: `D:\Programs\Firefox`, `D:\Programs\Steam`, `D:\Programs\OBS Studio` (folder name = app name without parentheses). Empty `""` — install to defaults.
+
+- The folder is passed to winget as `--location`. Installers that cannot choose a folder (Discord, CapCut, msix packages such as TranslucentTB) silently install where they always do; the log tells you where each app actually landed.
+- Per app you can set `"folder": "Games\\Steam"` (inside `installRoot`), `"location": "E:\\Steam"` (any path) or `"noLocation": true` (leave the folder alone).
+- winget portable packages go to `installRoot\_portable` (the script writes this into winget settings).
+- If the `installRoot` drive does not exist (say, a laptop with one disk), the script warns and installs everything to defaults.
+- The checklist lets you switch this off for a single run.
+
 ### Installers from disk
 
 `apps.local` — exe/msi files in `resources\installers`, installed silently:
 
 ```json
 "local": [
-  { "name": "MiniBin", "path": "resources\\installers\\MiniBin-6.1.1.1-Setup.exe", "args": "/S", "detect": "MiniBin" }
+  { "name": "MiniBin", "path": "resources\\installers\\MiniBin-6.1.1.1-Setup.exe", "args": "/S /D={root}\\MiniBin", "detect": "MiniBin" }
 ]
 ```
 
 - `args` — silent-install switches: NSIS `/S`, Inno Setup `/VERYSILENT /NORESTART`; for msi the script adds `/qn` itself.
+- `{root}` in `args` is replaced with `installRoot`: NSIS `/D={root}\\App` (always last, no quotes), Inno Setup `/DIR={root}\\App`. With an empty `installRoot` such arguments are dropped.
 - `detect` — part of the name in "Apps & features", or a file path (`%ProgramFiles(x86)%\...`). If found, the install is skipped.
 
 ### Apps not in winget
