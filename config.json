@@ -1,0 +1,199 @@
+{
+  // ============================================================
+  //  WindowsDoProgram — файл настроек
+  //  Строки, начинающиеся с //, — комментарии, они игнорируются.
+  //  true = применить, false = пропустить.
+  // ============================================================
+
+  // Создавать точку восстановления перед изменениями
+  "createRestorePoint": true,
+
+  // ---------- 1. Установка программ через winget ----------
+  // Список ID пакетов. Найти ID: winget search "название"
+  // Можно писать просто строку "Google.Chrome"
+  // или объект { "id": "7zip.7zip", "name": "7-Zip", "args": "--scope machine" }
+  "apps": {
+    "enabled": true,
+    "winget": [
+      // --- Браузер, связь ---
+      { "id": "Mozilla.Firefox.ru",             "name": "Firefox (русский)" },   // англ. версия: Mozilla.Firefox
+      { "id": "Telegram.TelegramDesktop",       "name": "Telegram" },
+      { "id": "Discord.Discord",                "name": "Discord" },
+
+      // --- VPN / прокси ---
+      { "id": "AmneziaVPN.AmneziaVPN",          "name": "AmneziaVPN" },
+      { "id": "Happ.Happ",                      "name": "Happ" },
+
+      // --- ИИ, заметки, разработка ---
+      { "id": "Anthropic.Claude",               "name": "Claude" },
+      { "id": "AnywhereLabs.DSHDesktop",        "name": "DSH Desktop (DeepSeek Harness)" },
+      { "id": "Google.Antigravity",             "name": "Antigravity" },
+      { "id": "Obsidian.Obsidian",              "name": "Obsidian" },
+
+      // --- Игры ---
+      { "id": "Valve.Steam",                    "name": "Steam" },
+      { "id": "EpicGames.EpicGamesLauncher",    "name": "Epic Games Launcher" },
+
+      // --- Утилиты ---
+      { "id": "RARLab.WinRAR",                  "name": "WinRAR" },
+      { "id": "voidtools.Everything",           "name": "Everything" },
+      { "id": "KeePassXCTeam.KeePassXC",        "name": "KeePassXC" },
+      { "id": "RamenSoftware.Windhawk",         "name": "Windhawk" },
+      { "id": "CharlesMilette.TranslucentTB",   "name": "TranslucentTB" },
+      { "id": "t1m0thyj.WinDynamicDesktop",     "name": "WinDynamicDesktop" },
+      { "id": "ElementLabs.Bionic",             "name": "Bionic" },
+
+      // --- Железо, мониторинг ---
+      { "id": "REALiX.HWiNFO",                  "name": "HWiNFO" },
+      { "id": "Guru3D.Afterburner",             "name": "MSI Afterburner" },
+
+      // --- Видео ---
+      { "id": "OBSProject.OBSStudio",           "name": "OBS Studio" },
+      { "id": "ByteDance.CapCut",               "name": "CapCut" }
+    ],
+
+    // Локальные установщики из папки resources\installers (путь относительно папки скрипта).
+    //   args   — ключи тихой установки (NSIS: /S, Inno Setup: /VERYSILENT /NORESTART, msi — ключи к /qn)
+    //   detect — как понять, что уже стоит: часть имени в «Установка и удаление программ»
+    //            или путь к файлу (можно с %ProgramFiles(x86)% и т.п.)
+    "local": [
+      { "name": "MiniBin (корзина в трее)", "path": "resources\\installers\\MiniBin-6.1.1.1-Setup.exe", "args": "/S", "detect": "MiniBin",
+        "note": "после установки запустить MiniBin и включить автозапуск в его настройках" }
+    ],
+
+    // Программы и шаги, которых нет в winget — в конце работы модуля выводится
+    // список, а ссылки открываются в браузере (openManualLinks).
+    "openManualLinks": true,
+    "manual": [
+      { "name": "uTorrent Web",      "url": "https://www.utorrent.com/web/",                                 "note": "скачать и установить вручную" },
+      { "name": "Ocypus Digital",    "url": "https://www.ocypus.com/download",                               "note": "ПО для кулера/дисплея Ocypus" },
+      { "name": "Windhawk → мод «Better file sizes in Explorer details»",
+        "url": "https://windhawk.net/mods/explorer-details-better-file-sizes",
+        "note": "открыть Windhawk → Explore → найти мод → Install" }
+    ]
+  },
+
+  // ---------- 2. Приватность и телеметрия ----------
+  "privacy": {
+    "enabled": true,
+    "disableTelemetry": true,            // телеметрия, службы DiagTrack и задачи сбора данных
+    "disableAdvertisingId": true,        // рекламный идентификатор
+    "disableTailoredExperiences": true,  // «персонализированные возможности»
+    "disableActivityHistory": true,      // журнал действий / временная шкала
+    "disableFeedbackRequests": true,     // запросы «оцените Windows»
+    "disableSuggestionsAndAds": true,    // советы, реклама в Пуске, на экране блокировки и в Параметрах
+    "disableCortana": true,
+    "disableBingInSearch": true,         // поиск в интернете из меню Пуск
+    "disableCopilot": true,
+    "disableRecall": true,
+    "disableLocation": false             // полностью отключить геолокацию
+  },
+
+  // ---------- 3. Удаление встроенных приложений ----------
+  "debloat": {
+    "enabled": true,
+    "removeOneDrive": false,
+    // Имена пакетов AppX. Посмотреть установленные: Get-AppxPackage | Select Name
+    "apps": [
+      "Microsoft.549981C3F5F10",           // Cortana
+      "Microsoft.BingNews",
+      "Microsoft.BingWeather",
+      "Microsoft.BingSearch",
+      "Microsoft.Copilot",
+      "Microsoft.GamingApp",               // Xbox
+      "Microsoft.Xbox.TCUI",
+      "Microsoft.XboxGameOverlay",
+      "Microsoft.XboxGamingOverlay",
+      "Microsoft.XboxIdentityProvider",
+      "Microsoft.XboxSpeechToTextOverlay",
+      "Microsoft.GetHelp",
+      "Microsoft.Getstarted",              // Советы
+      "Microsoft.MicrosoftOfficeHub",
+      "Microsoft.MicrosoftSolitaireCollection",
+      "Microsoft.People",
+      "Microsoft.PowerAutomateDesktop",
+      "Microsoft.Todos",
+      "Microsoft.WindowsFeedbackHub",
+      "Microsoft.WindowsMaps",
+      "Microsoft.MixedReality.Portal",
+      "Microsoft.SkypeApp",
+      "Microsoft.YourPhone",               // Связь с телефоном
+      "Microsoft.ZuneMusic",               // Media Player
+      "Microsoft.ZuneVideo",               // Кино и ТВ
+      "Microsoft.OutlookForWindows",
+      "Microsoft.Windows.DevHome",
+      "MicrosoftTeams",
+      "MSTeams",
+      "Clipchamp.Clipchamp",
+      "microsoft.windowscommunicationsapps" // Почта и Календарь
+    ]
+  },
+
+  // ---------- 4. Проводник, панель задач, внешний вид ----------
+  "explorer": {
+    "enabled": true,
+    "showFileExtensions": true,
+    "showHiddenFiles": true,
+    "openExplorerToThisPC": true,        // Проводник открывается на «Этот компьютер»
+    "classicContextMenu": true,          // старое контекстное меню (Win 10 стиль)
+    "hideRecentFilesInExplorer": true,   // не показывать недавние/частые файлы и облачные файлы на главной
+    "darkTheme": true,
+
+    // --- из «Explorer config.bat» (Apply All) ---
+    "compactView": true,                 // компактный вид (меньше отступы между файлами)
+    "hideStatusBar": true,               // скрыть строку состояния внизу окна
+    "hideHomeInNavPane": true,           // убрать «Главная» из левой панели
+    "hideGalleryInNavPane": true,        // убрать «Галерея» из левой панели
+    "hideNetworkInNavPane": true,        // убрать «Сеть» из левой панели
+    "showRecycleBinInNavPane": true,     // показать «Корзина» в левой панели
+    "hideDesktopRecycleBin": true,       // убрать значок корзины с рабочего стола (корзина — в MiniBin/левой панели)
+
+    "taskbarAlignLeft": false,           // кнопки панели задач слева
+    "taskbarSearch": "icon",             // "hidden" | "icon" | "box" | "iconLabel"
+    "hideTaskView": true,
+    "hideWidgets": true,
+    "hideChat": true,
+    "hideCopilotButton": true,
+    "showSecondsInClock": true,          // секунды в часах на панели задач
+    "endTaskInTaskbar": true,            // пункт «Завершить задачу» в меню панели задач
+    "disableStartRecommendations": true, // убрать «Рекомендуем» в Пуске
+    "showMorePinsInStart": false         // больше закреплённых в Пуске
+  },
+
+  // ---------- 5. Оформление: курсоры и тема EJECT (из папки resources) ----------
+  "theme": {
+    "enabled": true,
+
+    // Курсоры W11 Cursors by Jepri Creations: "dark" | "light" | "" (не ставить)
+    "cursors": "dark",
+    "cursorsFolder": "resources\\cursors",   // внутри: dark\cursor\Install.inf и light\cursor\Install.inf
+
+    // Тема EJECT (сторонний .msstyles). Для сторонних тем нужен UltraUXThemePatcher,
+    // после него ОБЯЗАТЕЛЬНА перезагрузка — тема применится автоматически после неё.
+    "eject": {
+      "enabled": true,
+      "folder": "resources\\themes\\EJECT", // внутри: UltraUXThemePatcher.exe и Eject Theme\Themes\
+      "patchUxTheme": true,              // установить UltraUXThemePatcher (тихо), если ещё не стоит
+      "themesFix": true,                 // Themes Fix.reg: тема не трогает значки, курсоры и обои
+      "themesService": true,             // служба «Темы» — автозапуск и запущена
+      "apply": true                      // применить тему (сразу, если патч уже стоял; иначе после перезагрузки)
+    }
+  },
+
+  // ---------- 6. Система ----------
+  "system": {
+    "enabled": true,
+    "powerPlan": "high",                 // "balanced" | "high" | "ultimate" | "" (не менять)
+    "monitorTimeoutMinutesAC": 15,       // отключение экрана от сети, 0 = никогда, -1 = не менять
+    "sleepTimeoutMinutesAC": 0,          // сон от сети, 0 = никогда, -1 = не менять
+    "disableHibernation": false,
+    "disableFastStartup": false,
+    "enableLongPaths": true,             // пути длиннее 260 символов
+    "enableClipboardHistory": true,      // Win+V
+    "disableStickyKeysShortcut": true,   // отключить залипание клавиш по 5×Shift
+    "verboseLogonStatus": false,         // подробные сообщения при входе/выходе
+    "excludeDriversFromWindowsUpdate": false,
+    "developerMode": false,
+    "timeZone": ""                       // например "Russian Standard Time"; пусто — не менять
+  }
+}

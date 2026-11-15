@@ -1,0 +1,8 @@
+# логи запусков / run logs
+logs/*
+!logs/.gitkeep
+
+# мусор Windows / Windows junk
+Thumbs.db
+desktop.ini
+*.lnk
