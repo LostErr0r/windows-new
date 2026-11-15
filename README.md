@@ -186,6 +186,26 @@ Keys in the `explorer` section match the checklist items. Everything "Apply All"
 - Removed built-in apps can be reinstalled from Microsoft Store.
 - Every run writes a log to `logs\`.
 
+## Troubleshooting
+
+**Every app fails with code `-1978335138` (0x8A15005E) after a couple of seconds.** That is `PINNED_CERTIFICATE_MISMATCH` from winget's **msstore** source: a fresh Windows ships an old App Installer whose pinned Store certificate no longer matches. winget opens all sources at once, so every install dies. By default the script uses only the `winget` source (`apps.source` in the config), which avoids the problem. If it still shows up, either:
+
+```powershell
+winget source remove msstore            # drop the problematic source
+```
+
+or update "App Installer" from Microsoft Store, which refreshes the pinned certificate.
+
+**`winget` not found.** Install "App Installer" from Microsoft Store, or download the `.msixbundle` from https://github.com/microsoft/winget-cli/releases and run it.
+
+**PowerShell refuses to run the script after a ZIP download.** `Run.bat` works around this, but if needed, unblock the files:
+
+```powershell
+Get-ChildItem -Recurse | Unblock-File
+```
+
+**Need to see what went wrong.** The full log of every run is in `logs\`; winget's own logs are in `%LOCALAPPDATA%\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\DiagOutputDir`.
+
 ## What applies after a reboot
 
 Telemetry, power plan and most settings apply immediately. Theme, context menu and taskbar — after Explorer restarts (done automatically). Long paths, developer mode, verbose logon, UltraUXThemePatcher and the EJECT theme — after a reboot.

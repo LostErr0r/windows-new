@@ -134,7 +134,7 @@ function Add-PropertyItems {
     param($List, [string]$Module, $Obj, [string[]]$Prefix, [string]$Group, $Labels, $Choices)
     foreach ($p in $Obj.PSObject.Properties) {
         $key = $p.Name; $v = $p.Value
-        if ($key -in @('cursorsFolder', 'folder')) { continue }
+        if ($key -in @('cursorsFolder', 'folder', 'source')) { continue }
         if ($Prefix.Count -eq 1 -and $key -eq 'enabled') { continue }
         $path  = [string[]]($Prefix + $key)
         $lkey  = (($path | Select-Object -Skip 1) -join '.')

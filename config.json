@@ -14,6 +14,10 @@
   // или объект { "id": "7zip.7zip", "name": "7-Zip", "args": "--scope machine" }
   "apps": {
     "enabled": true,
+    // Источник winget. "winget" — только официальный репозиторий (рекомендуется).
+    // "" — все источники, включая msstore; на свежей Windows msstore часто падает с ошибкой
+    // сертификата 0x8A15005E и ломает каждую установку.
+    "source": "winget",
     "winget": [
       // --- Браузер, связь ---
       { "id": "Mozilla.Firefox.ru",             "name": "Firefox (русский)" },   // англ. версия: Mozilla.Firefox

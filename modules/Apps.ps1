@@ -3,8 +3,8 @@
 # ============================================================
 
 function Test-WingetInstalled {
-    param([string]$Id)
-    $out = & winget list --id $Id -e --accept-source-agreements 2>$null
+    param([string]$Id, [string[]]$SourceArgs = @())
+    $out = & winget list --id $Id -e --accept-source-agreements @SourceArgs 2>$null
     return ($LASTEXITCODE -eq 0 -and (($out -join "`n") -match [regex]::Escape($Id)))
 }
 
@@ -115,8 +115,14 @@ function Invoke-AppsModule {
         return
     }
 
+    # Источник пакетов. По умолчанию только 'winget': источник msstore на свежей Windows часто
+    # падает с ошибкой сертификата (0x8A15005E) и валит вместе с собой каждую установку.
+    $source  = [string](Get-Cfg $cfg 'source' 'winget')
+    $srcArgs = if ($source) { @('--source', $source) } else { @() }
+
     Invoke-Step 'Обновление источников winget' {
-        Invoke-External 'winget' @('source','update') | Out-Null
+        $upd = @('source','update'); if ($source) { $upd += @('--name', $source) }
+        Invoke-External 'winget' $upd | Out-Null
     }
 
     $ok = 0; $skip = 0; $fail = 0
@@ -131,18 +137,21 @@ function Invoke-AppsModule {
         if (-not $id) { continue }
         if (-not $enabled) { Write-Log "$name — пропуск (enabled=false)"; $skip++; continue }
 
-        if (-not (Test-DryRun) -and (Test-WingetInstalled $id)) {
+        if (-not (Test-DryRun) -and (Test-WingetInstalled $id $srcArgs)) {
             Write-Log "$name уже установлен" 'OK'; $skip++; continue
         }
 
         Write-Log "Установка: $name ($id)" 'STEP'
-        $wargs = @('install','--id',$id,'-e','--silent','--accept-source-agreements','--accept-package-agreements','--disable-interactivity') + $extra
+        $wargs = @('install','--id',$id,'-e','--silent','--accept-source-agreements','--accept-package-agreements','--disable-interactivity') + $srcArgs + $extra
         $code = Invoke-External 'winget' $wargs
         switch ($code) {
             0            { Write-Log "$name установлен" 'OK'; $ok++ }
             -1978335189  { Write-Log "$name уже установлен (актуальная версия)" 'OK'; $skip++ }   # 0x8A15002B
             -1978335135  { Write-Log "$name уже установлен" 'OK'; $skip++ }                        # 0x8A150061
-            default      { Write-Log "$name — ошибка установки, код $code" 'ERROR'; $fail++ }
+            -1978335138  {                                                                                # 0x8A15005E PINNED_CERTIFICATE_MISMATCH
+                Write-Log "$name — ошибка сертификата источника winget (0x8A15005E). Обновите «Установщик приложений» в Microsoft Store или выполните: winget source remove msstore" 'ERROR'; $fail++
+            }
+            default      { Write-Log ("{0} — ошибка установки, код {1} (0x{2:X8})" -f $name, $code, ($code -band 0xFFFFFFFF)) 'ERROR'; $fail++ }
         }
     }
     Write-Log "Программы: установлено $ok, пропущено $skip, ошибок $fail" $(if ($fail) {'WARN'} else {'OK'})
