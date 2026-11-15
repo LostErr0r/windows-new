@@ -194,6 +194,10 @@ Get-AppxPackage | Select-Object Name | Sort-Object Name
 - winget («Установщик приложений» из Microsoft Store) — для модуля `apps`.
 - Права администратора — `Run.bat` запросит сам.
 
+## Лицензия
+
+[MIT](LICENSE). Сторонние компоненты в `resources` распространяются на своих условиях (см. ниже).
+
 ## Сторонние компоненты в resources
 
 - **W11 Cursors Concept** — [Jepri Creations](https://www.deviantart.com/jepricreations). Распространяется бесплатно с указанием автора.

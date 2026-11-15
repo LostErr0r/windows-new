@@ -196,6 +196,10 @@ Telemetry, power plan and most settings apply immediately. Theme, context menu a
 - winget ("App Installer" from Microsoft Store) — for the `apps` module.
 - Administrator rights — `Run.bat` asks for them itself.
 
+## License
+
+[MIT](LICENSE). Third-party components in `resources` keep their own terms (see below).
+
 ## Third-party components in resources
 
 - **W11 Cursors Concept** — [Jepri Creations](https://www.deviantart.com/jepricreations). Free to share with attribution.
