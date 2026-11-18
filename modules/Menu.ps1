@@ -8,10 +8,13 @@ function Get-ItemLabels {
     return @{
         apps = @{
             winget          = 'Через winget'
-            local           = 'С диска (WatchThisFolder)'
+            github          = 'С GitHub — последний релиз'
+            local           = 'С диска (resources\installers)'
             manual          = 'Вручную — показать подсказку и ссылку'
             openManualLinks = 'Открыть ссылки ручных шагов в браузере'
-            installRoot     = 'Ставить программы в папку (выкл. = по умолчанию на C:)'
+            installRoot     = 'Папка установки программ (варианты по порядку; все сняты = по умолчанию на C:)'
+            auto            = 'auto — самый свободный несистемный диск, папка Programs'
+            askInstallRoot  = 'Спрашивать папку установки при запуске из меню'
         }
         privacy = @{
             disableTelemetry           = 'Телеметрия и диагностика (DiagTrack, задачи сбора данных)'
@@ -164,7 +167,7 @@ function Add-PropertyItems {
                     $note = if ($Labels[$e]) { $e } else { '' }
                     $en = $true
                 } else {
-                    $id   = [string](Get-Cfg $e 'id' '')
+                    $id   = [string](Get-Cfg $e 'id' (Get-Cfg $e 'repo' ''))
                     $name = [string](Get-Cfg $e 'name' $id)
                     $note = $id
                     $en   = [bool](Get-Cfg $e 'enabled' $true)

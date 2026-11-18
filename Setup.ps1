@@ -129,6 +129,8 @@ if ($All)     { Invoke-Modules -Names @($ModuleMap.Keys); exit 0 }
 if ($Modules) { Invoke-Modules -Names $Modules;           exit 0 }
 
 # ---------- Интерактивное меню ----------
+$Global:WDP_Interactive = $true   # модули могут задавать вопросы (например, папку установки)
+
 function Show-Menu {
     Clear-Host
     Write-Host ''
@@ -136,7 +138,7 @@ function Show-Menu {
     Write-Host ("   Конфиг: {0}" -f $ConfigPath) -ForegroundColor DarkGray
     if ($Global:WDP_DryRun) { Write-Host '   РЕЖИМ ПРОВЕРКИ (DryRun): изменения не применяются' -ForegroundColor Magenta }
     Write-Host ''
-    Write-Host '   [1] Выполнить ВСЁ по config.json (без вопросов)' -ForegroundColor Green
+    Write-Host '   [1] Выполнить ВСЁ по config.json (спросит только папку установки)' -ForegroundColor Green
     Write-Host ''
     $i = 2
     foreach ($k in $ModuleMap.Keys) {

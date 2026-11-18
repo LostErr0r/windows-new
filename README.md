@@ -127,16 +127,48 @@ Already installed apps are skipped.
 ### Install folder (off the system drive)
 
 ```json
-"installRoot": "D:\\Programs"
+"installRoot": [ "D:\\Programs", "auto" ],
+"askInstallRoot": true
 ```
 
-When set, every app goes into its own subfolder: `D:\Programs\Firefox`, `D:\Programs\Steam`, `D:\Programs\OBS Studio` (folder name = app name without parentheses). Empty `""` — install to defaults.
+Every app goes into its own subfolder: `D:\Programs\Firefox`, `D:\Programs\Steam`, `D:\Programs\OBS Studio` (folder name = app name without parentheses).
 
+**When started from the menu, the script first asks where to install.** It lists drives with size and free space, recommends the config option (Enter accepts), offers `<drive>\Programs` for every drive, and accepts a custom path or `0` for defaults:
+
+```
+   Where to install?
+     C:  System       476 GB, free  120 GB (system)
+     D:  Data         931 GB, free  500 GB
+
+   [1] D:\Programs   (recommended: D:\Programs)
+   [2] C:\Programs   (system drive)
+   [0] Default (usually C:\Program Files)
+   Number, custom path (e.g. E:\Soft) or Enter — option [1]:
+```
+
+- `installRoot` is an ordered list of candidates; the first whose drive exists wins: a concrete path, `"auto"` (the non-system drive with the most free space, folder `Programs` on it) or `"%SystemDrive%\\Programs"` (a separate folder on the system drive). An empty list `[]` means defaults.
+- In `-All` / `-Modules` mode from the command line there is no prompt: the first matching candidate is used, and if none matches, apps install to defaults. `askInstallRoot: false` disables the prompt in the menu too.
 - The folder is passed to winget as `--location`. Installers that cannot choose a folder (Discord, CapCut, msix packages such as TranslucentTB) silently install where they always do; the log tells you where each app actually landed.
 - Per app you can set `"folder": "Games\\Steam"` (inside `installRoot`), `"location": "E:\\Steam"` (any path) or `"noLocation": true` (leave the folder alone).
 - winget portable packages go to `installRoot\_portable` (the script writes this into winget settings).
-- If the `installRoot` drive does not exist (say, a laptop with one disk), the script warns and installs everything to defaults.
-- The checklist lets you switch this off for a single run.
+
+### Latest release from GitHub
+
+`apps.github` downloads a file from a repository's latest release and unpacks it. This is how [zapret-discord-youtube](https://github.com/Flowseal/zapret-discord-youtube) is set up: the `.rar` goes to the desktop and is unpacked into a `zapret-discord-youtube-<version>` folder.
+
+```json
+"github": [
+  { "name": "zapret-discord-youtube", "repo": "Flowseal/zapret-discord-youtube", "asset": "*.rar",
+    "dest": "{desktop}", "extract": true, "keepArchive": false }
+]
+```
+
+- `asset` — file mask in the release: `*.rar`, `*.zip`, `*x64*.exe`.
+- `dest` — where to put it: `{desktop}` (the real desktop, even when redirected to OneDrive), `{downloads}` or any path.
+- `extract` — unpack. `.zip` uses PowerShell; `.rar`/`.7z`/`.tar.gz` try WinRAR, 7-Zip, then Windows' built-in `tar.exe`. That is why GitHub downloads run after winget: WinRAR is already installed by then.
+- `keepArchive: false` — the archive is deleted after a successful unpack. If unpacking fails, the archive stays.
+- If the folder for this version already exists, it is skipped. A new version downloads next to the old one.
+- Antivirus software may flag the WinDivert driver inside zapret. If files disappear after unpacking, add the folder to Defender exclusions yourself; the script does not add exclusions.
 
 ### Installers from disk
 
